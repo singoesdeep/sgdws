@@ -3,6 +3,8 @@ package main
 import (
 	"log"
 	"net"
+
+	"github.com/singoesdeep/sgdws/internal/websocket"
 )
 
 func main() {
@@ -22,14 +24,49 @@ func main() {
 	}
 }
 
-func handleConn(conn net.Conn) {
+func handleConn(nc net.Conn) {
+	conn := websocket.NewConn(nc)
 	defer conn.Close()
 
-	buf := make([]byte, 1024)
-	n, err := conn.Read(buf)
+	err := websocket.PerformHandshake(conn.NetConn)
 	if err != nil {
-		log.Println("Read error:", err)
+		log.Println("Handshake failed:", err)
 		return
 	}
-	log.Printf("🔹 Received data: %s", string(buf[:n]))
+
+	for {
+		frame, err := conn.ReadFrame()
+		if err != nil {
+			log.Println("ReadFrame error:", err)
+			break
+		}
+
+		switch frame.Opcode {
+		case websocket.OpText:
+			log.Printf("Text message: %s", string(frame.Payload))
+			err := conn.WriteFrame(websocket.OpText, frame.Payload)
+			if err != nil {
+				log.Println("WriteFrame error:", err)
+				return
+			}
+
+		case websocket.OpClose:
+			log.Println("Close frame received")
+			return
+
+		case websocket.OpPing:
+			log.Println("Ping frame received - ponging back")
+			err := conn.WriteFrame(websocket.OpPong, nil)
+			if err != nil {
+				log.Println("WriteFrame pong error:", err)
+				return
+			}
+
+		case websocket.OpPong:
+			log.Println("Pong frame received")
+
+		default:
+			log.Printf("Unhandled opcode: %d", frame.Opcode)
+		}
+	}
 }
