@@ -37,7 +37,7 @@ Instead of using high-level libraries, `sgdws` gets its hands dirty with:
 Run the example echo server:
 
 ```bash
-go run ./cmd/sgdwsd
+go run ./cmd/sgdws
 ```
 
 Then connect using any WebSocket client:
@@ -51,7 +51,7 @@ Send a message and get it echoed back!
 Project Structure
 ```cs
 sgdws/
-├── cmd/sgdwsd/            # Example server
+├── cmd/sgdws/            # Example server
 │   └── main.go
 ├── internal/websocket/    # Core protocol implementation
 │   ├── handshake.go
