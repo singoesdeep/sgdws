@@ -7,6 +7,8 @@ import (
 	"github.com/singoesdeep/sgdws/internal/websocket"
 )
 
+var hub = websocket.NewHub()
+
 func main() {
 	ln, err := net.Listen("tcp", ":8080")
 	if err != nil {
@@ -26,10 +28,11 @@ func main() {
 
 func handleConn(nc net.Conn) {
 	conn := websocket.NewConn(nc)
+	hub.AddClient(conn)
+	defer hub.RemoveClient(conn)
 	defer conn.Close()
 
-	err := websocket.PerformHandshake(conn.NetConn)
-	if err != nil {
+	if err := websocket.PerformHandshake(conn.NetConn); err != nil {
 		log.Println("Handshake failed:", err)
 		return
 	}
@@ -44,11 +47,7 @@ func handleConn(nc net.Conn) {
 		switch frame.Opcode {
 		case websocket.OpText:
 			log.Printf("Text message: %s", string(frame.Payload))
-			err := conn.WriteFrame(websocket.OpText, frame.Payload)
-			if err != nil {
-				log.Println("WriteFrame error:", err)
-				return
-			}
+			hub.Broadcast(conn, websocket.OpText, frame.Payload)
 
 		case websocket.OpClose:
 			log.Println("Close frame received")
